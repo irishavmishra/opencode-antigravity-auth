@@ -443,6 +443,7 @@ Create `~/.config/opencode/antigravity.json` (or `.opencode/antigravity.json` in
 | Option | Default | Description |
 |--------|---------|-------------|
 | `account_selection_strategy` | `"sticky"` | Strategy for distributing requests across accounts |
+| `pid_offset_enabled` | `false` | Use PID-based offset for multi-session distribution |
 
 **Available strategies:**
 
@@ -469,6 +470,7 @@ OPENCODE_ANTIGRAVITY_DEBUG=1                              # debug
 OPENCODE_ANTIGRAVITY_LOG_DIR=/path                        # log_dir
 OPENCODE_ANTIGRAVITY_KEEP_THINKING=1                      # keep_thinking
 OPENCODE_ANTIGRAVITY_ACCOUNT_SELECTION_STRATEGY=round-robin  # account_selection_strategy
+OPENCODE_ANTIGRAVITY_PID_OFFSET_ENABLED=1                 # pid_offset_enabled
 ```
 
 <details>
@@ -495,6 +497,7 @@ OPENCODE_ANTIGRAVITY_ACCOUNT_SELECTION_STRATEGY=round-robin  # account_selection
   "max_rate_limit_wait_seconds": 300,
   "quota_fallback": false,
   "account_selection_strategy": "sticky",
+  "pid_offset_enabled": false,
   "signature_cache": {
     "enabled": true,
     "memory_ttl_seconds": 3600,
@@ -523,7 +526,7 @@ DCP creates synthetic assistant messages that lack thinking blocks. **Our plugin
 
 ### oh-my-opencode
 
-When spawning parallel subagents, multiple processes may select the same account causing rate limit errors. **Workaround:** Add more accounts via `opencode auth login`.
+When spawning parallel subagents, multiple processes may select the same account causing rate limit errors. **Workaround:** Enable `pid_offset_enabled: true` to distribute sessions across accounts, or add more accounts via `opencode auth login`.
 
 ### Plugins You Don't Need
 
