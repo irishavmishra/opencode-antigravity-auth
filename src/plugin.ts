@@ -45,6 +45,14 @@ import {
   resetEmptyResponseAttempts,
   SHORT_RETRY_THRESHOLD_MS,
 } from "./plugin/rate-limiter";
+import {
+  trackWarmupAttempt,
+  getWarmupAttemptCount,
+  markWarmupSuccess,
+  clearWarmupAttempt,
+  MAX_OAUTH_ACCOUNTS,
+  MAX_WARMUP_RETRIES,
+} from "./plugin/warmup-tracker";
 import { createAutoUpdateCheckerHook } from "./hooks/auto-update-checker";
 import { loadConfig, type AntigravityConfig } from "./plugin/config";
 import { createSessionRecoveryHook, getRecoverySuccessToast } from "./plugin/recovery";
@@ -60,48 +68,9 @@ import type {
   Provider,
 } from "./plugin/types";
 
-const MAX_OAUTH_ACCOUNTS = 10;
-const MAX_WARMUP_SESSIONS = 1000;
-const MAX_WARMUP_RETRIES = 2;
-const warmupAttemptedSessionIds = new Set<string>();
-const warmupSucceededSessionIds = new Set<string>();
+// Warmup tracking is now imported from ./plugin/warmup-tracker.ts
 
 const log = createLogger("plugin");
-
-function trackWarmupAttempt(sessionId: string): boolean {
-  if (warmupSucceededSessionIds.has(sessionId)) {
-    return false;
-  }
-  if (warmupAttemptedSessionIds.size >= MAX_WARMUP_SESSIONS) {
-    const first = warmupAttemptedSessionIds.values().next().value;
-    if (first) {
-      warmupAttemptedSessionIds.delete(first);
-      warmupSucceededSessionIds.delete(first);
-    }
-  }
-  const attempts = getWarmupAttemptCount(sessionId);
-  if (attempts >= MAX_WARMUP_RETRIES) {
-    return false;
-  }
-  warmupAttemptedSessionIds.add(sessionId);
-  return true;
-}
-
-function getWarmupAttemptCount(sessionId: string): number {
-  return warmupAttemptedSessionIds.has(sessionId) ? 1 : 0;
-}
-
-function markWarmupSuccess(sessionId: string): void {
-  warmupSucceededSessionIds.add(sessionId);
-  if (warmupSucceededSessionIds.size >= MAX_WARMUP_SESSIONS) {
-    const first = warmupSucceededSessionIds.values().next().value;
-    if (first) warmupSucceededSessionIds.delete(first);
-  }
-}
-
-function clearWarmupAttempt(sessionId: string): void {
-  warmupAttemptedSessionIds.delete(sessionId);
-}
 
 function isWSL(): boolean {
   if (process.platform !== "linux") return false;
