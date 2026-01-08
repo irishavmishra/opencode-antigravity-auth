@@ -53,6 +53,13 @@ import {
   MAX_OAUTH_ACCOUNTS,
   MAX_WARMUP_RETRIES,
 } from "./plugin/warmup-tracker";
+import {
+  isWSL,
+  isWSL2,
+  isRemoteEnvironment,
+  shouldSkipLocalServer,
+  openBrowser,
+} from "./plugin/environment";
 import { createAutoUpdateCheckerHook } from "./hooks/auto-update-checker";
 import { loadConfig, type AntigravityConfig } from "./plugin/config";
 import { createSessionRecoveryHook, getRecoverySuccessToast } from "./plugin/recovery";
@@ -72,70 +79,7 @@ import type {
 
 const log = createLogger("plugin");
 
-function isWSL(): boolean {
-  if (process.platform !== "linux") return false;
-  try {
-    const { readFileSync } = require("node:fs");
-    const release = readFileSync("/proc/version", "utf8").toLowerCase();
-    return release.includes("microsoft") || release.includes("wsl");
-  } catch {
-    return false;
-  }
-}
-
-function isWSL2(): boolean {
-  if (!isWSL()) return false;
-  try {
-    const { readFileSync } = require("node:fs");
-    const version = readFileSync("/proc/version", "utf8").toLowerCase();
-    return version.includes("wsl2") || version.includes("microsoft-standard");
-  } catch {
-    return false;
-  }
-}
-
-function isRemoteEnvironment(): boolean {
-  if (process.env.SSH_CLIENT || process.env.SSH_TTY || process.env.SSH_CONNECTION) {
-    return true;
-  }
-  if (process.env.REMOTE_CONTAINERS || process.env.CODESPACES) {
-    return true;
-  }
-  if (process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY && !isWSL()) {
-    return true;
-  }
-  return false;
-}
-
-function shouldSkipLocalServer(): boolean {
-  return isWSL2() || isRemoteEnvironment();
-}
-
-async function openBrowser(url: string): Promise<boolean> {
-  try {
-    if (process.platform === "darwin") {
-      exec(`open "${url}"`);
-      return true;
-    }
-    if (process.platform === "win32") {
-      exec(`start "" "${url}"`);
-      return true;
-    }
-    if (isWSL()) {
-      try {
-        exec(`wslview "${url}"`);
-        return true;
-      } catch { }
-    }
-    if (!process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
-      return false;
-    }
-    exec(`xdg-open "${url}"`);
-    return true;
-  } catch {
-    return false;
-  }
-}
+// Environment detection functions are now imported from ./plugin/environment.ts
 
 async function promptOAuthCallbackValue(message: string): Promise<string> {
   const { createInterface } = await import("node:readline/promises");
