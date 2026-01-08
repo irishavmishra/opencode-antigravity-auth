@@ -52,16 +52,16 @@ function isRateLimitedForFamily(account: ManagedAccount, family: ModelFamily, mo
   if (family === "claude") {
     return isRateLimitedForQuotaKey(account, "claude");
   }
-  
+
   const antigravityIsLimited = isRateLimitedForHeaderStyle(account, family, "antigravity", model);
   const cliIsLimited = isRateLimitedForHeaderStyle(account, family, "gemini-cli", model);
-  
+
   return antigravityIsLimited && cliIsLimited;
 }
 
 function isRateLimitedForHeaderStyle(account: ManagedAccount, family: ModelFamily, headerStyle: HeaderStyle, model?: string | null): boolean {
   clearExpiredRateLimits(account);
-  
+
   if (family === "claude") {
     return isRateLimitedForQuotaKey(account, "claude");
   }
@@ -101,8 +101,11 @@ function clearExpiredRateLimits(account: ManagedAccount): void {
  */
 export class AccountManager {
   private accounts: ManagedAccount[] = [];
-  private cursor = 0;
   private currentAccountIndexByFamily: Record<ModelFamily, number> = {
+    claude: -1,
+    gemini: -1,
+  };
+  private lastUsedIndexByFamily: Record<ModelFamily, number> = {
     claude: -1,
     gemini: -1,
   };
@@ -119,7 +122,6 @@ export class AccountManager {
 
     if (stored && stored.accounts.length === 0) {
       this.accounts = [];
-      this.cursor = 0;
       return;
     }
 
@@ -157,10 +159,8 @@ export class AccountManager {
         })
         .filter((a): a is ManagedAccount => a !== null);
 
-      this.cursor = clampNonNegativeInt(stored.activeIndex, 0);
       if (this.accounts.length > 0) {
-        this.cursor = this.cursor % this.accounts.length;
-        const defaultIndex = this.cursor;
+        const defaultIndex = clampNonNegativeInt(stored.activeIndex, 0) % this.accounts.length;
         this.currentAccountIndexByFamily.claude = clampNonNegativeInt(
           stored.activeIndexByFamily?.claude,
           defaultIndex
@@ -190,7 +190,6 @@ export class AccountManager {
             rateLimitResetTimes: {},
           },
         ];
-        this.cursor = 0;
         this.currentAccountIndexByFamily.claude = 0;
         this.currentAccountIndexByFamily.gemini = 0;
       }
@@ -258,14 +257,30 @@ export class AccountManager {
       return null;
     }
 
-    const account = available[this.cursor % available.length];
-    if (!account) {
-      return null;
+    // Implement round-robin: start from the account after the last used one
+    const lastUsedIndex = this.lastUsedIndexByFamily[family];
+    let startSearchIndex = 0;
+
+    if (lastUsedIndex >= 0) {
+      // Find position of last used account in the accounts array
+      // Start searching from the next account
+      startSearchIndex = (lastUsedIndex + 1) % this.accounts.length;
     }
 
-    this.cursor++;
-    account.lastUsed = nowMs();
-    return account;
+    // Search through accounts starting from startSearchIndex, wrapping around
+    for (let i = 0; i < this.accounts.length; i++) {
+      const checkIndex = (startSearchIndex + i) % this.accounts.length;
+      const account = this.accounts[checkIndex];
+
+      if (account && available.includes(account)) {
+        account.lastUsed = nowMs();
+        this.lastUsedIndexByFamily[family] = checkIndex;
+        return account;
+      }
+    }
+
+    // Fallback: should not reach here if available.length > 0
+    return null;
   }
 
   markRateLimited(
@@ -339,16 +354,12 @@ export class AccountManager {
     });
 
     if (this.accounts.length === 0) {
-      this.cursor = 0;
       this.currentAccountIndexByFamily.claude = -1;
       this.currentAccountIndexByFamily.gemini = -1;
+      this.lastUsedIndexByFamily.claude = -1;
+      this.lastUsedIndexByFamily.gemini = -1;
       return true;
     }
-
-    if (this.cursor > idx) {
-      this.cursor -= 1;
-    }
-    this.cursor = this.cursor % this.accounts.length;
 
     for (const family of ["claude", "gemini"] as ModelFamily[]) {
       if (this.currentAccountIndexByFamily[family] > idx) {
@@ -356,6 +367,13 @@ export class AccountManager {
       }
       if (this.currentAccountIndexByFamily[family] >= this.accounts.length) {
         this.currentAccountIndexByFamily[family] = -1;
+      }
+
+      if (this.lastUsedIndexByFamily[family] > idx) {
+        this.lastUsedIndexByFamily[family] -= 1;
+      }
+      if (this.lastUsedIndexByFamily[family] >= this.accounts.length) {
+        this.lastUsedIndexByFamily[family] = -1;
       }
     }
 
@@ -399,7 +417,7 @@ export class AccountManager {
 
         const t1 = a.rateLimitResetTimes[antigravityKey];
         const t2 = a.rateLimitResetTimes[cliKey];
-        
+
         const accountWait = Math.min(
           t1 !== undefined ? Math.max(0, t1 - nowMs()) : Infinity,
           t2 !== undefined ? Math.max(0, t2 - nowMs()) : Infinity
@@ -418,7 +436,7 @@ export class AccountManager {
   async saveToDisk(): Promise<void> {
     const claudeIndex = Math.max(0, this.currentAccountIndexByFamily.claude);
     const geminiIndex = Math.max(0, this.currentAccountIndexByFamily.gemini);
-    
+
     const storage: AccountStorageV3 = {
       version: 3,
       accounts: this.accounts.map((a) => ({

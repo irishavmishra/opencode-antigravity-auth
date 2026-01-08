@@ -191,7 +191,45 @@ describe("AccountManager", () => {
     expect(fifth?.parts.refreshToken).toBe("r2");
   });
 
+  it("rotates through all available accounts in round-robin fashion", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(0));
+
+    const stored: AccountStorageV3 = {
+      version: 3,
+      accounts: [
+        { refreshToken: "r1", projectId: "p1", addedAt: 1, lastUsed: 0 },
+        { refreshToken: "r2", projectId: "p2", addedAt: 1, lastUsed: 0 },
+        { refreshToken: "r3", projectId: "p3", addedAt: 1, lastUsed: 0 },
+      ],
+      activeIndex: 0,
+    };
+
+    const manager = new AccountManager(undefined, stored);
+    const family: ModelFamily = "claude";
+
+    // Get first account and mark it rate-limited
+    const first = manager.getNextForFamily(family);
+    expect(first?.parts.refreshToken).toBe("r1");
+    manager.markRateLimited(first!, 60000, family);
+
+    // Should get second account (next in rotation)
+    const second = manager.getNextForFamily(family);
+    expect(second?.parts.refreshToken).toBe("r2");
+    manager.markRateLimited(second!, 60000, family);
+
+    // Should get third account (next in rotation)
+    const third = manager.getNextForFamily(family);
+    expect(third?.parts.refreshToken).toBe("r3");
+    manager.markRateLimited(third!, 60000, family);
+
+    // All rate-limited, should return null
+    const none = manager.getNextForFamily(family);
+    expect(none).toBeNull();
+  });
+
   it("removes an account and keeps cursor consistent", () => {
+
     vi.useFakeTimers();
     vi.setSystemTime(new Date(0));
 
