@@ -45,6 +45,7 @@ import {
 import {
   CLAUDE_TOOL_SYSTEM_INSTRUCTION,
   CLAUDE_DESCRIPTION_PROMPT,
+  ANTIGRAVITY_SYSTEM_INSTRUCTION,
 } from "../constants";
 import {
   analyzeConversationState,
@@ -172,9 +173,9 @@ function resolveConversationKey(requestPayload: Record<string, unknown>): string
 
   const systemSeed = extractTextFromContent(
     (anyPayload.systemInstruction as any)?.parts
-      ?? anyPayload.systemInstruction
-      ?? anyPayload.system
-      ?? anyPayload.system_instruction,
+    ?? anyPayload.systemInstruction
+    ?? anyPayload.system
+    ?? anyPayload.system_instruction,
   );
   const messageSeed = Array.isArray(anyPayload.messages)
     ? extractConversationSeedFromMessages(anyPayload.messages)
@@ -628,10 +629,10 @@ export function prepareAntigravityRequest(
   const defaultEndpoint = headerStyle === "gemini-cli" ? GEMINI_CLI_ENDPOINT : ANTIGRAVITY_ENDPOINT;
   const baseEndpoint = endpointOverride ?? defaultEndpoint;
   const transformedUrl = `${baseEndpoint}/v1internal:${rawAction}${streaming ? "?alt=sse" : ""}`;
-    
+
   const isClaude = isClaudeModel(resolved.actualModel);
   const isClaudeThinking = isClaudeThinkingModel(resolved.actualModel);
-  
+
   // Tier-based thinking configuration from model resolver
   const tierThinkingBudget = resolved.thinkingBudget;
   const tierThinkingLevel = resolved.thinkingLevel;
@@ -759,10 +760,10 @@ export function prepareAntigravityRequest(
         if (normalizedThinking) {
           // Use tier-based thinking budget if specified via model suffix, otherwise fall back to user config
           const thinkingBudget = tierThinkingBudget ?? normalizedThinking.thinkingBudget;
-          
+
           // Build thinking config based on model type
           let thinkingConfig: Record<string, unknown>;
-          
+
           if (isClaudeThinking) {
             // Claude uses snake_case keys
             thinkingConfig = {
@@ -1246,10 +1247,41 @@ export function prepareAntigravityRequest(
         const effectiveProjectId = projectId?.trim() || generateSyntheticProjectId();
         resolvedProjectId = effectiveProjectId;
 
+        // Inject Antigravity system instruction with role "user" (CLIProxyAPI v6.6.89 compatibility)
+        // This sets request.systemInstruction.role = "user" and request.systemInstruction.parts[0].text
+        if (headerStyle === "antigravity") {
+          const existingSystemInstruction = requestPayload.systemInstruction;
+          if (existingSystemInstruction && typeof existingSystemInstruction === "object") {
+            const sys = existingSystemInstruction as Record<string, unknown>;
+            sys.role = "user";
+            if (Array.isArray(sys.parts) && sys.parts.length > 0) {
+              const firstPart = sys.parts[0] as Record<string, unknown>;
+              if (firstPart && typeof firstPart.text === "string") {
+                firstPart.text = ANTIGRAVITY_SYSTEM_INSTRUCTION + "\n\n" + firstPart.text;
+              } else {
+                sys.parts = [{ text: ANTIGRAVITY_SYSTEM_INSTRUCTION }, ...sys.parts];
+              }
+            } else {
+              sys.parts = [{ text: ANTIGRAVITY_SYSTEM_INSTRUCTION }];
+            }
+          } else if (typeof existingSystemInstruction === "string") {
+            requestPayload.systemInstruction = {
+              role: "user",
+              parts: [{ text: ANTIGRAVITY_SYSTEM_INSTRUCTION + "\n\n" + existingSystemInstruction }],
+            };
+          } else {
+            requestPayload.systemInstruction = {
+              role: "user",
+              parts: [{ text: ANTIGRAVITY_SYSTEM_INSTRUCTION }],
+            };
+          }
+        }
+
         const wrappedBody = {
           project: effectiveProjectId,
           model: effectiveModel,
           request: requestPayload,
+          requestType: "agent",
         };
 
         // Add additional Antigravity fields
