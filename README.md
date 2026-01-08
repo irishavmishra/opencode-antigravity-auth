@@ -1,8 +1,9 @@
 # Antigravity + Gemini CLI OAuth Plugin for Opencode
 
-[![npm version](https://img.shields.io/npm/v/opencode-antigravity-auth.svg)](https://www.npmjs.com/package/opencode-antigravity-auth)
-[![npm beta](https://img.shields.io/npm/v/opencode-antigravity-auth/beta.svg?label=beta)](https://www.npmjs.com/package/opencode-antigravity-auth)
+[![npm version](https://img.shields.io/npm/v/rishav-antigravity-auth.svg)](https://www.npmjs.com/package/rishav-antigravity-auth)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> **🔧 Fixed Fork**: This is a fork of [opencode-antigravity-auth](https://github.com/NoeFabris/opencode-antigravity-auth) with **multi-account rotation bug fixes**. Issues #134, #135, and #136 are resolved - accounts now properly rotate when rate-limited instead of repeatedly using the same account.
 
 Enable Opencode to authenticate against **Antigravity** (Google's IDE) via OAuth so you can use Antigravity rate limits and access models like `gemini-3-pro-high` and `claude-opus-4-5-thinking` with your Google credentials.
 
@@ -25,7 +26,7 @@ Enable Opencode to authenticate against **Antigravity** (Google's IDE) via OAuth
 Paste this into any LLM agent (Claude Code, OpenCode, Cursor, etc.):
 
 ```
-Install the opencode-antigravity-auth plugin and add the Antigravity model definitions to ~/.config/opencode/opencode.json by following: https://raw.githubusercontent.com/NoeFabris/opencode-antigravity-auth/main/README.md
+Install the rishav-antigravity-auth plugin (fixed fork with proper account rotation) and add the Antigravity model definitions to ~/.config/opencode/opencode.json by following: https://raw.githubusercontent.com/irishavmishra/opencode-antigravity-auth/main/README.md
 ```
 
 **Option B: Manual setup**
@@ -34,7 +35,7 @@ Install the opencode-antigravity-auth plugin and add the Antigravity model defin
 
    ```json
    {
-     "plugin": ["opencode-antigravity-auth@1.2.7"]
+     "plugin": ["rishav-antigravity-auth@1.2.8"]
    }
    ```
 
@@ -48,7 +49,7 @@ Install the opencode-antigravity-auth plugin and add the Antigravity model defin
 
    ```json
    {
-     "plugin": ["opencode-antigravity-auth@1.2.7"],
+     "plugin": ["rishav-antigravity-auth@1.2.8"],
      "provider": {
        "google": {
          "models": {
@@ -88,7 +89,7 @@ Create `~/.config/opencode/opencode.json`:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-antigravity-auth@1.2.7"],
+  "plugin": ["rishav-antigravity-auth@1.2.8"],
   "provider": {
     "google": {
       "models": {
@@ -209,7 +210,7 @@ Models with `-preview` suffix use Gemini CLI quota:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-antigravity-auth@1.2.7"],
+  "plugin": ["rishav-antigravity-auth@1.2.8"],
   "provider": {
     "google": {
       "models": {

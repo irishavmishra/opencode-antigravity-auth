@@ -1,19 +1,19 @@
 {
-    "name": "opencode-antigravity-auth",
-    "version": "1.2.7",
-    "description": "Google Antigravity IDE OAuth auth plugin for Opencode - access Gemini 3 Pro and Claude 4.5 using Google credentials",
+    "name": "rishav-antigravity-auth",
+    "version": "1.2.8",
+    "description": "Google Antigravity IDE OAuth auth plugin for Opencode - access Gemini 3 Pro and Claude 4.5 using Google credentials (Fixed rate limit rotation)",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "type": "module",
     "license": "MIT",
-    "author": "noefabris",
+    "author": "irishavmishra",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/NoeFabris/opencode-antigravity-auth.git"
+        "url": "git+https://github.com/irishavmishra/opencode-antigravity-auth.git"
     },
-    "homepage": "https://github.com/NoeFabris/opencode-antigravity-auth#readme",
+    "homepage": "https://github.com/irishavmishra/opencode-antigravity-auth#readme",
     "bugs": {
-        "url": "https://github.com/NoeFabris/opencode-antigravity-auth/issues"
+        "url": "https://github.com/irishavmishra/opencode-antigravity-auth/issues"
     },
     "keywords": [
         "opencode",
@@ -41,7 +41,6 @@
         "test:watch": "vitest",
         "test:ui": "vitest --ui",
         "test:coverage": "vitest run --coverage",
-        "prepublishOnly": "npm run build",
         "test:e2e:models": "npx tsx script/test-models.ts",
         "test:e2e:regression": "npx tsx script/test-regression.ts"
     },
