@@ -82,12 +82,7 @@ import type {
   Provider,
 } from "./plugin/types";
 
-// Warmup tracking is now imported from ./plugin/warmup-tracker.ts
-
 const log = createLogger("plugin");
-
-// Environment detection functions are now imported from ./plugin/environment.ts
-// OAuth helpers are now imported from ./plugin/oauth-helpers.ts
 
 function clampInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) {
@@ -338,8 +333,6 @@ function formatWaitTime(ms: number): string {
   const remainingMinutes = minutes % 60;
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
-
-// Rate limiting functions are now imported from ./plugin/rate-limiter.ts
 
 /**
  * Sleep for a given number of milliseconds, respecting an abort signal.
