@@ -60,6 +60,13 @@ import {
   shouldSkipLocalServer,
   openBrowser,
 } from "./plugin/environment";
+import {
+  type OAuthCallbackParams,
+  getStateFromAuthorizationUrl,
+  extractOAuthCallbackParams,
+  parseOAuthCallbackInput,
+  promptManualOAuthInput,
+} from "./plugin/oauth-helpers";
 import { createAutoUpdateCheckerHook } from "./hooks/auto-update-checker";
 import { loadConfig, type AntigravityConfig } from "./plugin/config";
 import { createSessionRecoveryHook, getRecoverySuccessToast } from "./plugin/recovery";
@@ -80,85 +87,7 @@ import type {
 const log = createLogger("plugin");
 
 // Environment detection functions are now imported from ./plugin/environment.ts
-
-async function promptOAuthCallbackValue(message: string): Promise<string> {
-  const { createInterface } = await import("node:readline/promises");
-  const { stdin, stdout } = await import("node:process");
-  const rl = createInterface({ input: stdin, output: stdout });
-  try {
-    return (await rl.question(message)).trim();
-  } finally {
-    rl.close();
-  }
-}
-
-type OAuthCallbackParams = { code: string; state: string };
-
-function getStateFromAuthorizationUrl(authorizationUrl: string): string {
-  try {
-    return new URL(authorizationUrl).searchParams.get("state") ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function extractOAuthCallbackParams(url: URL): OAuthCallbackParams | null {
-  const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
-  if (!code || !state) {
-    return null;
-  }
-  return { code, state };
-}
-
-function parseOAuthCallbackInput(
-  value: string,
-  fallbackState: string,
-): OAuthCallbackParams | { error: string } {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { error: "Missing authorization code" };
-  }
-
-  try {
-    const url = new URL(trimmed);
-    const code = url.searchParams.get("code");
-    const state = url.searchParams.get("state") ?? fallbackState;
-
-    if (!code) {
-      return { error: "Missing code in callback URL" };
-    }
-    if (!state) {
-      return { error: "Missing state in callback URL" };
-    }
-
-    return { code, state };
-  } catch {
-    if (!fallbackState) {
-      return { error: "Missing state. Paste the full redirect URL instead of only the code." };
-    }
-
-    return { code: trimmed, state: fallbackState };
-  }
-}
-
-async function promptManualOAuthInput(
-  fallbackState: string,
-): Promise<AntigravityTokenExchangeResult> {
-  console.log("1. Open the URL above in your browser and complete Google sign-in.");
-  console.log("2. After approving, copy the full redirected localhost URL from the address bar.");
-  console.log("3. Paste it back here.\n");
-
-  const callbackInput = await promptOAuthCallbackValue(
-    "Paste the redirect URL (or just the code) here: ",
-  );
-  const params = parseOAuthCallbackInput(callbackInput, fallbackState);
-  if ("error" in params) {
-    return { type: "failed", error: params.error };
-  }
-
-  return exchangeAntigravity(params.code, params.state);
-}
+// OAuth helpers are now imported from ./plugin/oauth-helpers.ts
 
 function clampInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) {
